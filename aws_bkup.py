@@ -1,8 +1,10 @@
-
+from __future__ import print_function
 import re
+import errno
+import os
 from glob import glob
 from os.path import join, basename, splitext
-from os import makedirs, environ, remove
+from os import environ, remove
 from shutil import copy, rmtree
 from uuid import uuid4
 import gzip
@@ -69,6 +71,15 @@ def regex_match(string, pattern):
     return pattern.match(string)
 
 
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc:  # Python >2.5
+        if exc.errno == errno.EEXIST and os.path.isdir(path):
+            pass
+        else:
+            raise
+
 def aws_bkup(section, include, exclude, s3root, categorize_weekly=True, compress=True, remove_source=True):
     """ Transfers a backup of any local files matching the user's criteria to AWS.
 
@@ -86,7 +97,7 @@ def aws_bkup(section, include, exclude, s3root, categorize_weekly=True, compress
     tmp_root = join('/tmp', str(uuid4()))
     tmp_dir = join(tmp_root, folder)
 
-    makedirs(tmp_dir, exist_ok=True)
+    mkdir_p(tmp_dir)
 
     for file in glob(include):
 
@@ -108,14 +119,23 @@ def aws_bkup(section, include, exclude, s3root, categorize_weekly=True, compress
     print('Syncronizing {} to s3'.format(tmp_dir))
     aws_sync(tmp_root, aws_dest)
 
+    if os.path.exists(tmp_root):
+        rmtree(tmp_root)
+
     print('Done')
-    rmtree(tmp_root)
 
 
 if __name__ == "__main__":
+  
+    import sys
+    args = sys.argv
+
+    if len(args) < 2:
+        print("Usage: python -m aws-bkup /path/to/config.cfg")
+        sys.exit()
 
     config = ConfigParser()
-    config.read('default.cfg')
+    config.read(args[1])
 
     environ['AWS_ACCESS_KEY_ID'] = config.get('aws', 'access_id')
     environ['AWS_SECRET_ACCESS_KEY'] = config.get('aws', 'secret_key')
