@@ -9,6 +9,7 @@ setup(
     author_email='antoine@reltech.com',
     url='http://github.com/twanas/aws-bkup',
     description='utility to backup server-side logs to aws s3.',
-    long_description=open('README').read(),
+    package_data={'': ['README.md']},
+    long_description=open('README.md').read(),
     install_requires=['configparser','awscli']
 )

@@ -48,8 +48,7 @@ def aws_sync(src, dest):
 
     """
     cmd = 'aws s3 sync {} {}'.format(src, dest)
-    push = subprocess.Popen(cmd, shell=True, stdout=subprocess.PIPE)
-    return push.returncode
+    push = subprocess.call(cmd, shell=True)
 
 
 def today():
@@ -139,9 +138,11 @@ if __name__ == "__main__":
 
     environ['AWS_ACCESS_KEY_ID'] = config.get('aws', 'access_id')
     environ['AWS_SECRET_ACCESS_KEY'] = config.get('aws', 'secret_key')
+    environ['AWS_DEFAULT_REGION'] = config.get('aws', 'region')
 
     for section in config.sections():
         if section != 'aws':
+            print('Starting {}'.format(section))
             aws_bkup(
                 section,
                 config.get(section, 'include'),
