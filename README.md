@@ -21,6 +21,7 @@ $ python -m aws_bkup path/to/config
 access_id = 123
 secret_key = 1234
 s3root = s3://backup-bucket
+region
 
 [category/subcategory]
 include = /path/to/files/*.txt
@@ -28,6 +29,7 @@ exclude = ^.*sys.*$
 compress = 1
 categorize_weekly = 1
 remove_source = 0
+file_suffix = serv04
 
 ```
 
