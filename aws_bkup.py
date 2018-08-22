@@ -23,22 +23,28 @@ def gz(src, dest):
 
     """
 
-    filename = splitext(basename(src))[0]
-    destpath = join(dest, '{}.gz'.format(filename))
+    filename = '{}.gz'.format(splitext(basename(src))[0])
+    destpath = join(dest, filename)
 
     blocksize = 1 << 16     #64kB
 
-    with open(src) as f_in:
-        f_out = gzip.open(destpath, 'wb')
+    with open(src) as f_in, gzip.open(destpath, 'wb') as f_out:
         while True:
             block = f_in.read(blocksize)
             if block == '':
                 break
-            f_out.write(block)
-        f_out.close()
+            f_out.write(block.encode())
+  
+    return filename
 
 
-def aws_sync(src, dest):
+def cp(src, dest):
+
+    copy(src,dest)
+
+    return basename(src) 
+
+def aws_cp(src, dest):
     """ Synchronise a local directory to aws
 
     Parameters
@@ -47,8 +53,15 @@ def aws_sync(src, dest):
     dest: aws bucket
 
     """
-    cmd = 'aws s3 sync {} {}'.format(src, dest)
-    push = subprocess.call(cmd, shell=True)
+    cmd = ['aws', 's3', 'cp', src, dest]
+
+    errorcode = -1
+    attempts = 0;
+
+    while(errorcode != 0 and attempts < 3):
+      errorcode = subprocess.call(cmd)
+
+    return errorcode
 
 
 def today():
@@ -64,12 +77,6 @@ def fwe():
     return d
 
 
-def regex_match(string, pattern):
-    """ Returns if there is a match between parameter and regex pattern """
-    pattern = re.compile(pattern)
-    return pattern.match(string)
-
-
 def mkdir_p(path):
     try:
         os.makedirs(path)
@@ -78,6 +85,7 @@ def mkdir_p(path):
             pass
         else:
             raise
+
 
 def aws_bkup(section, include, exclude, s3root, categorize_weekly=True, compress=True, remove_source=True):
     """ Transfers a backup of any local files matching the user's criteria to AWS.
@@ -92,36 +100,48 @@ def aws_bkup(section, include, exclude, s3root, categorize_weekly=True, compress
 
     """
 
+    print('Starting {}'.format(section))
+
     folder = '{}'.format(fwe() if categorize_weekly else today())
     tmp_root = join('/tmp', str(uuid4()))
     tmp_dir = join(tmp_root, folder)
 
     mkdir_p(tmp_dir)
 
-    for file in glob(include):
+    aws_dest = join(s3root, section, folder)
 
-        if regex_match(file, exclude):
+    exclude_pattern = re.compile(exclude)
+
+    for file in glob(include):
+        
+        if exclude_pattern.match(file):
             continue
 
         print('Processing: {}'.format(file))
 
         if compress:
-            gz(file, tmp_dir)
+            copied_file = gz(file, tmp_dir)
         else:
-            copy(file, tmp_dir)
+            copied_file = cp(file, tmp_dir)
 
-        if remove_source:
+        error = aws_cp(
+            join(tmp_dir, copied_file), 
+            join(aws_dest, copied_file)
+        ) 
+
+        remove(
+            join(tmp_dir, copied_file)
+        )
+
+        # only remove if aws copy was successful
+        if remove_source and not error > 0:
             remove(file)
 
-    aws_dest = join(s3root, section)
-
-    print('Syncronizing {} to s3'.format(tmp_dir))
-    aws_sync(tmp_root, aws_dest)
 
     if os.path.exists(tmp_root):
         rmtree(tmp_root)
 
-    print('Done')
+    print('Done {}'.format(section))
 
 
 if __name__ == "__main__":
@@ -142,7 +162,6 @@ if __name__ == "__main__":
 
     for section in config.sections():
         if section != 'aws':
-            print('Starting {}'.format(section))
             aws_bkup(
                 section,
                 config.get(section, 'include'),
