@@ -21,7 +21,8 @@ $ python -m aws_bkup path/to/config
 access_id = 123
 secret_key = 1234
 s3root = s3://backup-bucket
-region
+region = us-east-1
+path = /path/to/aws/binary
 
 [category/subcategory]
 include = /path/to/files/*.txt
