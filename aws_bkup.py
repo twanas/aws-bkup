@@ -13,7 +13,7 @@ from datetime import date, timedelta
 import subprocess
 
 
-def gz(src, dest):
+def gz(src, dest, file_suffix):
     """ Compresses a file to *.gz
 
         Parameters
@@ -23,7 +23,7 @@ def gz(src, dest):
 
     """
 
-    filename = '{}.gz'.format(splitext(basename(src))[0])
+    filename = '{}-{}.gz'.format(splitext(basename(src))[0], file_suffix)
     destpath = join(dest, filename)
 
     blocksize = 1 << 16     #64kB
@@ -38,13 +38,16 @@ def gz(src, dest):
     return filename
 
 
-def cp(src, dest):
+def cp(src, dest, file_suffix):
+
+    filename_portioned = splitext(basename(src));
+    filename = '{}-{}{}'.format(filename_portioned[0], file_suffix, filename_portioned[1])
 
     copy(src,dest)
 
     return basename(src) 
 
-def aws_cp(src, dest):
+def aws_cp(src, dest, env):
     """ Synchronise a local directory to aws
 
     Parameters
@@ -59,7 +62,7 @@ def aws_cp(src, dest):
     attempts = 0;
 
     while(errorcode != 0 and attempts < 3):
-      errorcode = subprocess.call(cmd)
+      errorcode = subprocess.call(cmd, env=env)
 
     return errorcode
 
@@ -87,7 +90,7 @@ def mkdir_p(path):
             raise
 
 
-def aws_bkup(section, include, exclude, s3root, categorize_weekly=True, compress=True, remove_source=True):
+def aws_bkup(section, include, exclude, s3root, suffix, categorize_weekly=True, compress=True, remove_source=True, env=None):
     """ Transfers a backup of any local files matching the user's criteria to AWS.
 
     Parameters
@@ -120,13 +123,14 @@ def aws_bkup(section, include, exclude, s3root, categorize_weekly=True, compress
         print('Processing: {}'.format(file))
 
         if compress:
-            copied_file = gz(file, tmp_dir)
+            copied_file = gz(file, tmp_dir, suffix)
         else:
-            copied_file = cp(file, tmp_dir)
+            copied_file = cp(file, tmp_dir, suffix)
 
         error = aws_cp(
             join(tmp_dir, copied_file), 
-            join(aws_dest, copied_file)
+            join(aws_dest, copied_file),
+            env
         ) 
 
         remove(
@@ -135,7 +139,11 @@ def aws_bkup(section, include, exclude, s3root, categorize_weekly=True, compress
 
         # only remove if aws copy was successful
         if remove_source and not error > 0:
-            remove(file)
+            try:
+              remove(file)
+            except OSError as e: 
+              if e.errno != errno.ENOENT:
+                raise
 
 
     if os.path.exists(tmp_root):
@@ -167,8 +175,15 @@ if __name__ == "__main__":
                 config.get(section, 'include'),
                 config.get(section, 'exclude'),
                 config.get('aws', 's3root'),
+                config.get(section, 'file_suffix'),
                 config.getboolean(section, 'categorize_weekly'),
                 config.getboolean(section, 'compress'),
-                config.getboolean(section, 'remove_source')
+                config.getboolean(section, 'remove_source'),
+                {
+                'AWS_ACCESS_KEY_ID': config.get('aws','access_id'),
+                'AWS_SECRET_ACCESS_KEY': config.get('aws','secret_key'),
+                'AWS_DEFAULT_REGION': config.get('aws','region'),
+                'PATH': config.get('aws','path'),
+                }
             )
 
