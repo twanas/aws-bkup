@@ -11,5 +11,5 @@ setup(
     description='utility to backup server-side logs to aws s3.',
     package_data={'': ['README.md']},
     long_description=open('README.md').read(),
-    install_requires=['configparser','awscli']
+    install_requires=['configparser','awscli', 'argparse']
 )

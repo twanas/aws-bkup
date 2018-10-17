@@ -42,6 +42,20 @@ The files will be moved to a temporary directory, optionally compressed and plac
 
 Finally, the source files are optionally removed from the host.
 
+## Run-Once
+
+In addition to a scheduled (daily, weekly) run, a user may wish to run a specific backup periodically.
+
+Users can override the `remove_source` specified in the configuration file, and additionally specify a subset of the
+`sections` in which to perform the backup run. This will provide finer granularity over the backup than the default
+usecase.
+
+For example, the below call overrides the `remove_source` setting configured in the config, and runs backups for sections user_category1 and user_category5
+
+```
+$ python -m aws_backup /path/to/config --remove_source=0 --sections=user_category1,user_category5
+```
+
 ## Requires
 
 *NIX based system, python 2.7+, aws-cli.

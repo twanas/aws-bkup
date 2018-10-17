@@ -8,6 +8,7 @@ from os import environ, remove
 from shutil import copy, rmtree
 from uuid import uuid4
 import gzip
+import argparse
 from configparser import ConfigParser
 from datetime import date, timedelta
 import subprocess
@@ -154,36 +155,51 @@ def aws_bkup(section, include, exclude, s3root, suffix, categorize_weekly=True, 
 
 if __name__ == "__main__":
   
-    import sys
-    args = sys.argv
+    parser = argparse.ArgumentParser('aws_bkup utility')
+    parser.add_argument('config', help='Path to *.cfg configuration file')
+    parser.add_argument('--remove_source', default=None)
+    parser.add_argument('--sections', default=None)
 
-    if len(args) < 2:
-        print("Usage: python -m aws-bkup /path/to/config.cfg")
-        sys.exit()
+    user_opt = parser.parse_args()
 
     config = ConfigParser()
-    config.read(args[1])
+    config.read(user_opt.config)
 
     environ['AWS_ACCESS_KEY_ID'] = config.get('aws', 'access_id')
     environ['AWS_SECRET_ACCESS_KEY'] = config.get('aws', 'secret_key')
     environ['AWS_DEFAULT_REGION'] = config.get('aws', 'region')
 
-    for section in config.sections():
-        if section != 'aws':
-            aws_bkup(
-                section,
-                config.get(section, 'include'),
-                config.get(section, 'exclude'),
-                config.get('aws', 's3root'),
-                config.get(section, 'file_suffix'),
-                config.getboolean(section, 'categorize_weekly'),
-                config.getboolean(section, 'compress'),
-                config.getboolean(section, 'remove_source'),
-                {
-                'AWS_ACCESS_KEY_ID': config.get('aws','access_id'),
-                'AWS_SECRET_ACCESS_KEY': config.get('aws','secret_key'),
-                'AWS_DEFAULT_REGION': config.get('aws','region'),
-                'PATH': config.get('aws','path'),
-                }
-            )
+    sections = config.sections()
+
+    if user_opt.sections:
+        sections = user_opt.sections.split(',')
+
+    for section in sections:
+
+        if section == 'aws': continue
+
+        config.get(section, 'remove_source')
+
+        remove_source =\
+            config.getboolean(section, 'remove_source')
+
+        if user_opt.remove_source:
+            remove_source = user_opt.remove_source
+
+        aws_bkup(
+            section,
+            config.get(section, 'include'),
+            config.get(section, 'exclude'),
+            config.get('aws', 's3root'),
+            config.get(section, 'file_suffix'),
+            config.getboolean(section, 'categorize_weekly'),
+            config.getboolean(section, 'compress'),
+            remove_source,
+            {
+            'AWS_ACCESS_KEY_ID': config.get('aws', 'access_id'),
+            'AWS_SECRET_ACCESS_KEY': config.get('aws', 'secret_key'),
+            'AWS_DEFAULT_REGION': config.get('aws', 'region'),
+            'PATH': config.get('aws', 'path'),
+            }
+        )
 
