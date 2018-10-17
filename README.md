@@ -53,7 +53,7 @@ usecase.
 For example, the below call overrides the `remove_source` setting configured in the config, and runs backups for sections user_category1 and user_category5
 
 ```
-$ python -m aws_backup /path/to/config --remove_source=0 --sections=user_category1,user_category5
+$ python -m aws_backup /path/to/config --preserve_source --sections=user_category1,user_category5
 ```
 
 ## Requires

@@ -157,7 +157,7 @@ if __name__ == "__main__":
   
     parser = argparse.ArgumentParser('aws_bkup utility')
     parser.add_argument('config', help='Path to *.cfg configuration file')
-    parser.add_argument('--remove_source', default=None)
+    parser.add_argument('--preserve_source', action='store_true', default=False)
     parser.add_argument('--sections', default=None)
 
     user_opt = parser.parse_args()
@@ -183,8 +183,8 @@ if __name__ == "__main__":
         remove_source =\
             config.getboolean(section, 'remove_source')
 
-        if user_opt.remove_source:
-            remove_source = user_opt.remove_source
+        if user_opt.preserve_source:
+            remove_source = False
 
         aws_bkup(
             section,
