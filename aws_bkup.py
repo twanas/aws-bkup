@@ -47,7 +47,7 @@ def cp(src, dest, file_suffix):
 
     copy(src,destpath)
 
-    return basename(src) 
+    return basename(filename) 
 
 def aws_cp(src, dest, env):
     """ Synchronise a local directory to aws
