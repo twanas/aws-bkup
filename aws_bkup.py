@@ -43,8 +43,9 @@ def cp(src, dest, file_suffix):
 
     filename_portioned = splitext(basename(src));
     filename = '{}-{}{}'.format(filename_portioned[0], file_suffix, filename_portioned[1])
+    destpath = join(dest, filename)
 
-    copy(src,dest)
+    copy(src,destpath)
 
     return basename(src) 
 
